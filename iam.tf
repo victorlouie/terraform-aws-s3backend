@@ -7,6 +7,8 @@ locals {
 resource "aws_iam_role" "iam_role" {
   name = "${local.namespace}-tf-assume-role"
 
+  # trust policy - defines principals that are trusted to assume the role
+  #  ie - who is allowed to assume the associated role
   assume_role_policy = <<-EOF
     {
         "Version": "2012-10-17",
