@@ -7,37 +7,38 @@ resource "random_string" "rand" {
 }
 
 locals {
-  namespace = substr(join("-", [var.namespace, random_string.rand.result]), 0, 24)
+  namespace               = substr(join("-", [var.namespace, random_string.rand.result]), 0, 24)
+  resource_group_tag_name = join(":", [var.company, var.team, "resource-group"])
 }
 
 resource "aws_resourcegroups_group" "resourcegroups_group" {
   name = "${local.namespace}-group"
 
   resource_query {
-    query = <<-JSON
+    query = <<JSON
 {
     "ResourceTypeFilters": [
         "AWS::AllSupported"
     ],
     "TagFilters": [
         {
-            "Key": "ResourceGroup",
+            "Key": "${local.resource_group_tag_name}",
             "Values": ["${local.namespace}"]
         }
     ]
 }
-    JSON
+JSON
   }
 }
 
 resource "aws_kms_key" "kms_key" {
   tags = {
-    ResourceGroup = local.namespace
+    (local.resource_group_tag_name) = local.namespace
   }
 }
 
 resource "aws_s3_bucket" "s3_bucket" {
-  bucket        = "${local.namespace}-state-bucket"
+  bucket        = "${local.namespace}-terraform-state-bucket"
   force_destroy = var.force_destroy_state
 
   versioning {
@@ -54,7 +55,7 @@ resource "aws_s3_bucket" "s3_bucket" {
   }
 
   tags = {
-    ResourceGroup = local.namespace
+    (local.resource_group_tag_name) = local.namespace
   }
 }
 
@@ -68,7 +69,7 @@ resource "aws_s3_bucket_public_access_block" "s3_bucket" {
 }
 
 resource "aws_dynamodb_table" "dynamodb_table" {
-  name         = "${local.namespace}-state-lock"
+  name         = "${local.namespace}-terraform-state-lock"
   hash_key     = "LockID"
   billing_mode = "PAY_PER_REQUEST"
 
@@ -76,8 +77,8 @@ resource "aws_dynamodb_table" "dynamodb_table" {
     name = "LockID"
     type = "S"
   }
-  
+
   tags = {
-    ResourceGroup = local.namespace
+    (local.resource_group_tag_name) = local.namespace
   }
 }

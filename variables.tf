@@ -15,3 +15,14 @@ variable "force_destroy_state" {
   default     = true
   type        = bool
 }
+
+variable "company" {
+  description = "Name of the company"
+  type        = string
+}
+
+variable "team" {
+  description = "Name of the team using the backend"
+  default     = "devops"
+  type        = string
+}

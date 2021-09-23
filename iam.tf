@@ -5,27 +5,34 @@ locals {
 }
 
 resource "aws_iam_role" "iam_role" {
-  name = "${local.namespace}-tf-assume-role"
+  name = "${local.namespace}-terraform-state-assume-iam-role"
 
   # trust policy - defines principals that are trusted to assume the role
   #  ie - who is allowed to assume the associated role
-  assume_role_policy = <<-EOF
-    {
-        "Version": "2012-10-17",
-        "Statement": [
-        {
-            "Action": "sts:AssumeRole",
-            "Principal": {
-                "AWS": ${jsonencode(local.principal_arns)}
-            },
-            "Effect": "Allow"
-        }
-        ]
-    }
-    EOF
+  assume_role_policy = data.aws_iam_policy_document.assume_policy_doc.json
 
   tags = {
-    ResourceGroup = local.namespace
+    (local.resource_group_tag_name) = local.namespace
+  }
+}
+
+data "aws_iam_policy_document" "assume_policy_doc" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole"
+    ]
+    principals {
+      type        = "AWS"
+      identifiers = local.principal_arns
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/Department"
+      values = [
+        "devops"
+      ]
+    }
   }
 }
 
@@ -54,10 +61,13 @@ data "aws_iam_policy_document" "policy_doc" {
   }
 }
 resource "aws_iam_policy" "iam_policy" {
-  name   = "${local.namespace}-tf-policy"
+  name   = "${local.namespace}-terraform-state-read-write-iam-policy"
   path   = "/"
   policy = data.aws_iam_policy_document.policy_doc.json
 }
+
+# Role is created by default with no permissions
+# Attach a policy to define what role is able to do when it is assumed
 resource "aws_iam_role_policy_attachment" "policy_attach" {
   role       = aws_iam_role.iam_role.name
   policy_arn = aws_iam_policy.iam_policy.arn
