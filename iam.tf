@@ -28,9 +28,9 @@ data "aws_iam_policy_document" "assume_policy_doc" {
     }
     condition {
       test     = "StringEquals"
-      variable = "aws:PrincipalTag/Department"
+      variable = "aws:PrincipalTag/${var.company}:team"
       values = [
-        "devops"
+        var.team
       ]
     }
   }
